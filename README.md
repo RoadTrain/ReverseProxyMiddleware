@@ -7,6 +7,12 @@ Based on [SharpReverseProxy](https://github.com/SharpTools/SharpReverseProxy) co
 
 ## How to Use
 
+Install the [ReverseProxyMiddleware package](https://www.nuget.org/packages/ReverseProxyMiddleware/) via Nuget:
+
+```powershell
+Install-Package ReverseProxyMiddleware
+```
+
 Open your *Startup.cs* and configure your reverse proxy:
 
 ```csharp
