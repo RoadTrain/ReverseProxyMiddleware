@@ -1,10 +1,11 @@
+using Microsoft.Owin;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Microsoft.Owin;
 using AppFunc = System.Func<System.Collections.Generic.IDictionary<string, object>, System.Threading.Tasks.Task>;
 
 namespace ReverseProxyMiddleware
@@ -44,7 +45,7 @@ namespace ReverseProxyMiddleware
 
             if (matchedRule.RequiresAuthentication && !UserIsAuthenticated(context))
             {
-                context.Response.StatusCode = (int) HttpStatusCode.Unauthorized;
+                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                 _options.Reporter.Invoke(resultBuilder.NotAuthenticated());
                 return;
             }
@@ -56,16 +57,28 @@ namespace ReverseProxyMiddleware
             matchedRule.Modifier.Invoke(proxyRequest, context.Authentication.User);
             proxyRequest.Headers.Host = proxyRequest.RequestUri.Host;
 
-            try
+            using (var swapStream = new MemoryStream())
             {
-                await ProxyTheRequest(context, proxyRequest, matchedRule);
-            }
-            catch (HttpRequestException)
-            {
-                context.Response.StatusCode = (int) HttpStatusCode.ServiceUnavailable;
-            }
+                var originalResponseBody = context.Response.Body;
 
-            _options.Reporter.Invoke(resultBuilder.Proxied(proxyRequest.RequestUri, context.Response.StatusCode));
+                context.Response.Body = swapStream;
+
+                try
+                {
+                    await ProxyTheRequest(context, proxyRequest, matchedRule);
+                }
+                catch (HttpRequestException)
+                {
+                    context.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                }
+
+                swapStream.Seek(0, SeekOrigin.Begin);
+
+                await swapStream.CopyToAsync(originalResponseBody);
+                context.Response.Body = originalResponseBody;
+
+                _options.Reporter.Invoke(resultBuilder.Proxied(proxyRequest.RequestUri, context.Response.StatusCode));
+            }
         }
 
         private async Task ProxyTheRequest(IOwinContext context, HttpRequestMessage proxyRequest, ProxyRule proxyRule)
@@ -77,7 +90,7 @@ namespace ReverseProxyMiddleware
             {
                 if (proxyRule.PreProcessResponse || proxyRule.ResponseModifier == null)
                 {
-                    context.Response.StatusCode = (int) responseMessage.StatusCode;
+                    context.Response.StatusCode = (int)responseMessage.StatusCode;
                     context.Response.ContentType = responseMessage.Content?.Headers.ContentType?.MediaType;
 
                     foreach (var header in responseMessage.Headers)
@@ -85,7 +98,7 @@ namespace ReverseProxyMiddleware
                         context.Response.Headers.SetValues(header.Key, header.Value.ToArray());
                     }
 
-                    // SendAsync removes chunking from the response. 
+                    // SendAsync removes chunking from the response.
                     // This removes the header so it doesn't expect a chunked response.
                     context.Response.Headers.Remove("transfer-encoding");
 
