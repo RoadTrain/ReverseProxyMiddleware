@@ -19,7 +19,7 @@ using System.Runtime.InteropServices;
 [assembly: Guid("9058d441-59f9-43ba-a84a-72e51f78cfe7")]
 [assembly: AssemblyTitle("ReverseProxyMiddleware")]
 [assembly: AssemblyDescription("Reverse Proxy Middleware for OWIN in .NET v4.6")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.0.1.0")]
+[assembly: AssemblyFileVersion("1.0.1.0")]
 [assembly: AssemblyCopyright("")]
 
